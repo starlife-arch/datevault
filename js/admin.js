@@ -1,0 +1,10 @@
+import { auth, db } from './firebase.js';
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { collection, getDocs, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+const panel=document.getElementById('adminCards'); const search=document.getElementById('adminSearch');
+const invite=()=>`INV-${Math.random().toString(36).slice(2,9).toUpperCase()}`;
+onAuthStateChanged(auth, async (user)=>{ if(!user) return location.href='login.html'; const snaps=await getDocs(collection(db,'users')); let users=[]; snaps.forEach(s=>users.push(s.data()));
+  const draw=(q='')=>{ panel.innerHTML=''; users.filter(u=>`${u.email} ${u.memberId} ${u.legalName||''}`.toLowerCase().includes(q.toLowerCase())).forEach(u=>{const el=document.createElement('article'); el.className='user-card'; el.innerHTML=`<h4>${u.legalName||u.email}</h4><p>${u.memberId} · ${u.verificationStatus}</p><div class='stack'><button data-id='${u.uid}' data-a='approve' class='btn btn-gold'>Approve</button><button data-id='${u.uid}' data-a='reject' class='btn btn-outline'>Reject</button><button data-id='${u.uid}' data-a='override' class='btn btn-outline'>Manual Activate</button><button data-id='${u.uid}' data-a='ban' class='btn btn-outline'>Ban/Unban</button></div>`; panel.append(el);});
+    panel.querySelectorAll('button').forEach(b=>b.onclick=async()=>{const id=b.dataset.id,a=b.dataset.a; if(a==='approve') await updateDoc(doc(db,'users',id),{verificationStatus:'approved_pending_invite',inviteCode:invite()}); if(a==='reject') await updateDoc(doc(db,'users',id),{verificationStatus:'rejected'}); if(a==='override') await updateDoc(doc(db,'users',id),{manualOverride:true,verificationStatus:'active_member',paid:true}); if(a==='ban') await updateDoc(doc(db,'users',id),{banned:true});});
+  }; draw(); search.oninput=()=>draw(search.value);
+});
